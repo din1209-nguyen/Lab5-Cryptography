@@ -178,7 +178,54 @@ class RSAService {
     }
   }
 
-  
+  // Xác minh chữ ký số cho dữ liệu
+  verify(data, signature, publicKey = null) {
+    try {
+      // Xác định khóa công khai sẽ sử dụng, ưu tiên khóa được truyền vào, nếu không có thì dùng this.publicKey
+      const key = publicKey || this.publicKey;
+
+      // Kiểm tra xem có khóa công khai không
+      if (!key) {
+        // Ném lỗi nếu không có khóa công khai
+        throw new Error('Không có khóa công khai để xác minh.');
+      }
+
+      // Kiểm tra data có phải là string không
+      if (typeof data !== 'string') {
+        // Ném lỗi nếu data không phải string
+        throw new Error('Dữ liệu xác minh phải là chuỗi (string).');
+      }
+
+      // Kiểm tra signature có phải là string không
+      if (typeof signature !== 'string') {
+        // Ném lỗi nếu signature không phải string
+        throw new Error('Chữ ký phải là chuỗi (string).');
+      }
+
+      // Tạo một object Verify sử dụng SHA-256 hash algorithm
+      // SHA-256 phải giống với hash algorithm khi tạo chữ ký
+      const verifier = crypto.createVerify('sha256');
+
+      // Cập nhật verifier với dữ liệu gốc
+      // 'utf8': Encoding của string dữ liệu
+      verifier.update(data, 'utf8');
+
+      // Xác minh chữ ký
+      // - key: Khóa công khai để sử dụng xác minh
+      // - signature: Chữ ký cần xác minh
+      // - 'base64': Format của chữ ký đầu vào
+      // Return: true nếu chữ ký hợp lệ, false nếu không
+      const isValid = verifier.verify(key, signature, 'base64');
+
+      // Trả về kết quả xác minh (true hoặc false)
+      return isValid;
+    } 
+    catch (error) {
+      console.error(`Lỗi xác minh chữ ký: ${error.message}`);
+      return false;
+    }
+  }
+
   setPublicKey(publicKeyString) {
     if (!publicKeyString) {
       throw new Error('Khóa công khai không được để trống.');

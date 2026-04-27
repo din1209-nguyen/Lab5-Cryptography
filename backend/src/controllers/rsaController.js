@@ -125,7 +125,41 @@ const RSAController = {
     }
   },
 
+  // Xác minh tính hợp lệ của chữ ký số
+  verify: (req, res) => {
+    try {
+      // Lấy dữ liệu gốc, chữ ký và khóa công khai để đối chiếu
+      const { data, signature, publicKey } = req.body;
 
+      if (!data) {
+        return res.status(400).json({
+          success: false,
+          message: 'data là bắt buộc',
+        });
+      }
+
+      if (!signature) {
+        return res.status(400).json({
+          success: false,
+          message: 'signature là bắt buộc',
+        });
+      }
+
+      // Thiết lập khóa công khai cho service nếu được cung cấp
+      if (publicKey) {
+        rsaService.setPublicKey(publicKey);
+      }
+
+      // Kiểm tra tính toàn vẹn của dữ liệu qua chữ ký
+      const isValid = rsaService.verify(data, signature, publicKey);
+
+      // Trả về kết quả kiểm tra (true/false)
+      res.status(200).json({ isValid });
+    } 
+    catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
 
   // Lấy khóa công khai hiện tại đang lưu trong service
   getPublicKey: (req, res) => {
