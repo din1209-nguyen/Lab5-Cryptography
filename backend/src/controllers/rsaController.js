@@ -49,7 +49,83 @@ const RSAController = {
     }
   },
 
-  
+  // Giải mã dữ liệu sử dụng khóa RSA
+  decrypt: (req, res) => {
+    try {
+      // Lấy dữ liệu mã hóa (encrypted) và khóa riêng tư (privateKey) từ request body
+      const { encrypted, privateKey } = req.body;
+
+      // Kiểm tra dữ liệu đầu vào bắt buộc
+      if (!encrypted) {
+        return res.status(400).json({
+          success: false,
+          message: 'encrypted là bắt buộc',
+        });
+      }
+
+      // Nếu người dùng truyền privateKey riêng, cập nhật vào service
+      if (privateKey) {
+        rsaService.setPrivateKey(privateKey);
+      }
+
+      // Thực hiện giải mã thông qua service
+      const decrypted = rsaService.decrypt(encrypted, privateKey);
+
+      // Trả về kết quả giải mã thành công
+      res.status(200).json({
+        success: true,
+        data: {
+          decrypted: decrypted,
+        },
+        message: 'Giải mã dữ liệu thành công',
+      });
+    } 
+    catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+
+  // Tạo chữ ký số (Digital Signature) cho dữ liệu
+  sign: (req, res) => {
+    try {
+      // Lấy dữ liệu cần ký và khóa riêng tư từ body
+      const { data, privateKey } = req.body;
+
+      if (!data) {
+        return res.status(400).json({
+          success: false,
+          message: 'data là bắt buộc',
+        });
+      }
+
+      // Cập nhật khóa riêng tư nếu có
+      if (privateKey) {
+        rsaService.setPrivateKey(privateKey);
+      }
+
+      // Gọi hàm sign sử dụng thuật toán SHA-256
+      const signature = rsaService.sign(data, privateKey);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          signature: signature,
+        },
+        message: 'Tạo chữ ký thành công',
+      });
+    } 
+    catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+
+
 
   // Lấy khóa công khai hiện tại đang lưu trong service
   getPublicKey: (req, res) => {

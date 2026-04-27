@@ -140,8 +140,45 @@ class RSAService {
     }
   }
 
-  
+  // Tạo chữ ký số (digital signature) cho dữ liệu
+  sign(data, privateKey = null) {
+    try {
+      // Xác định khóa riêng tư sẽ sử dụng
+      // Ưu tiên khóa được truyền vào, nếu không có thì dùng this.privateKey
+      const key = privateKey || this.privateKey;
 
+      // Kiểm tra xem có khóa riêng tư không
+      if (!key) {
+        // Ném lỗi nếu không có khóa riêng tư
+        throw new Error('Không có khóa riêng tư để ký.');
+      }
+
+      // Kiểm tra data có phải là string không
+      if (typeof data !== 'string') {
+        // Ném lỗi nếu data không phải string
+        throw new Error('Dữ liệu ký phải là chuỗi (string).');
+      }
+
+      // Tạo một object Sign sử dụng SHA-256 hash algorithm
+      // 'sha256': Thuật toán hash mạnh, phổ biến, và an toàn
+      const signer = crypto.createSign('sha256');
+
+      // Cập nhật signer với dữ liệu cần ký
+      // 'utf8': Encoding của string dữ liệu
+      signer.update(data, 'utf8');
+
+      // Tạo chữ ký sử dụng khóa riêng tư
+      // 'base64': Format đầu ra (dễ truyền tải và lưu trữ)
+      const signature = signer.sign(key, 'base64');
+
+      return signature;
+    } 
+    catch (error) {
+      throw new Error(`Lỗi tạo chữ ký: ${error.message}`);
+    }
+  }
+
+  
   setPublicKey(publicKeyString) {
     if (!publicKeyString) {
       throw new Error('Khóa công khai không được để trống.');
