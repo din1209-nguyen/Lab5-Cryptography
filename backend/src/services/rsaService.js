@@ -59,6 +59,50 @@ class RSAService {
   }
 
 
+  // Mã hóa plaintext sử dụng RSA
+  encrypt(plaintext, key = null, keyType = 'public') {
+    try {
+      // Xác định khóa sẽ sử dụng: nếu truyền key thì dùng key, ngược lại dùng publicKey/privateKey đã lưu
+      const useKey = key || (keyType === 'public' ? this.publicKey : this.privateKey);
+
+      if (!useKey) {
+        throw new Error('Không có khóa phù hợp. Vui lòng tạo hoặc cung cấp khóa.');
+      }
+
+      if (typeof plaintext !== 'string') {
+        throw new Error('Văn bản cần mã hóa phải là chuỗi (string).');
+      }
+
+      const buffer = Buffer.from(plaintext, 'utf8');
+
+      // Chọn hàm mã hóa dựa trên keyType
+      let encryptedBuffer;
+      if (keyType === 'public') {
+        // Mã hóa bằng khóa công khai
+        encryptedBuffer = crypto.publicEncrypt(
+          { key: useKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+          buffer
+        );
+      } else if (keyType === 'private') {
+        // Mã hóa bằng khóa riêng tư (privateEncrypt)
+        encryptedBuffer = crypto.privateEncrypt(
+          { key: useKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+          buffer
+        );
+      } else {
+        throw new Error('keyType không hợp lệ. Sử dụng "public" hoặc "private".');
+      }
+
+      return encryptedBuffer.toString('base64');
+    } catch (error) {
+      // Nếu có lỗi, ném ra lỗi chi tiết
+      throw new Error(`Lỗi mã hóa: ${error.message}`);
+    }
+  }
+
+
+  
+
   setPublicKey(publicKeyString) {
     if (!publicKeyString) {
       throw new Error('Khóa công khai không được để trống.');
