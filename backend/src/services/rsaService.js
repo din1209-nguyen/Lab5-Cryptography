@@ -101,6 +101,45 @@ class RSAService {
   }
 
 
+  // Giải mã dữ liệu mã hóa sử dụng RSA
+  decrypt(encryptedText, key = null, keyType = 'private') {
+    try {
+      const useKey = key || (keyType === 'private' ? this.privateKey : this.publicKey);
+
+      if (!useKey) {
+        throw new Error('Không có khóa phù hợp để giải mã.');
+      }
+
+      if (typeof encryptedText !== 'string') {
+        throw new Error('Dữ liệu mã hóa phải là chuỗi (string).');
+      }
+
+      const buffer = Buffer.from(encryptedText, 'base64');
+
+      let decryptedBuffer;
+      if (keyType === 'private') {
+        // Giải mã bằng khóa riêng tư
+        decryptedBuffer = crypto.privateDecrypt(
+          { key: useKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+          buffer
+        );
+      } else if (keyType === 'public') {
+        // Giải mã bằng khóa công khai (publicDecrypt)
+        decryptedBuffer = crypto.publicDecrypt(
+          { key: useKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+          buffer
+        );
+      } else {
+        throw new Error('keyType không hợp lệ. Sử dụng "private" hoặc "public".');
+      }
+
+      return decryptedBuffer.toString('utf8');
+    } catch (error) {
+      // Nếu có lỗi, ném ra lỗi chi tiết
+      throw new Error(`Lỗi giải mã: ${error.message}`);
+    }
+  }
+
   
 
   setPublicKey(publicKeyString) {

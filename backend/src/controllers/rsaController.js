@@ -50,6 +50,24 @@ const RSAController = {
   },
 
   
+
+  // Lấy khóa công khai hiện tại đang lưu trong service
+  getPublicKey: (req, res) => {
+    try {
+      const publicKey = rsaService.getPublicKey();
+
+      // Kiểm tra nếu chưa khởi tạo cặp khóa nào
+      if (!publicKey) {
+        return res.status(404).json({ 
+          error: 'Chưa có khóa công khai. Vui lòng tạo khóa trước.' 
+        });
+      }
+
+      res.status(200).json({ publicKey });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
 };
 
 
