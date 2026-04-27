@@ -2,22 +2,32 @@ import React, { useState } from 'react';
 import './AsymmetricEncryption.css';
 
 function AsymmetricEncryption({ onBack }) {
+  const [operation, setOperation] = useState('generate');
+  const [loading, setLoading] = useState(false);
+  const [copiedKey, setCopiedKey] = useState('');
+  const [copiedResult, setCopiedResult] = useState(false);
+
   const [keySize, setKeySize] = useState(2048);
   const [publicKey, setPublicKey] = useState('');
   const [privateKey, setPrivateKey] = useState('');
-  const [operation, setOperation] = useState('generate');
-  const [plaintext, setPlaintext] = useState('');
-  const [ciphertext, setCiphertext] = useState('');
-  const [keyInput, setKeyInput] = useState('');
-  const [result, setResult] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [generateError, setGenerateError] = useState('');
+
+  const [encryptPlaintext, setEncryptPlaintext] = useState('');
+  const [encryptKeyInput, setEncryptKeyInput] = useState('');
+  const [encryptResult, setEncryptResult] = useState('');
+  const [encryptError, setEncryptError] = useState('');
   const [encryptionType, setEncryptionType] = useState('public');
 
+  const [decryptCiphertext, setDecryptCiphertext] = useState('');
+  const [decryptKeyInput, setDecryptKeyInput] = useState('');
+  const [decryptResult, setDecryptResult] = useState('');
+  const [decryptError, setDecryptError] = useState('');
+  const [decryptionType, setDecryptionType] = useState('private');
+
+  // Xử lý Generate
   const handleGenerateKeyPair = async () => {
     setLoading(true);
-    setError('');
+    setGenerateError('');
 
     try {
       const response = await fetch('http://localhost:5000/api/crypto/rsa/generate', {
@@ -30,107 +40,127 @@ function AsymmetricEncryption({ onBack }) {
       if (data.publicKey && data.privateKey) {
         setPublicKey(data.publicKey);
         setPrivateKey(data.privateKey);
-        setResult('');
-        setPlaintext('');
-        setCiphertext('');
       } else {
-        setError('Error generating key pair');
+        setGenerateError('Error generating key pair');
       }
     } catch (err) {
-      setError('Error generating key pair: ' + err.message);
+      setGenerateError('Error generating key pair: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // Xử lý Encrypt
   const handleEncrypt = async () => {
-    if (!plaintext) {
-      setError('Please enter plaintext');
+    if (!encryptPlaintext) {
+      setEncryptError('Please enter plaintext');
       return;
     }
-
-    if (!keyInput) {
-      setError('Please provide a key');
+    if (!encryptKeyInput) {
+      setEncryptError('Please provide a key');
       return;
     }
 
     setLoading(true);
-    setError('');
+    setEncryptError('');
 
     try {
+      const payload = { plaintext: encryptPlaintext };
+      if (encryptionType === 'public') {
+        payload.publicKey = encryptKeyInput;
+      } else {
+        payload.privateKey = encryptKeyInput;
+      }
+
       const response = await fetch('http://localhost:5000/api/crypto/rsa/encrypt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plaintext, key: keyInput, keyType: encryptionType })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
-      if (data.error) {
-        setError('Error encrypting: ' + data.error);
+      
+      if (!data.success) {
+        setEncryptError('Lỗi mã hóa: ' + (data.message || data.error || JSON.stringify(data)));
       } else {
-        setResult(data.result);
-        setCiphertext(data.result);
+        setEncryptResult(data.data.ciphertext);
       }
     } catch (err) {
-      setError('Error encrypting: ' + err.message);
+      setEncryptError('Error encrypting: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // Xử lý Decrypt
   const handleDecrypt = async () => {
-    if (!ciphertext) {
-      setError('Please enter ciphertext');
+    if (!decryptCiphertext) {
+      setDecryptError('Please enter ciphertext');
       return;
     }
-
-    if (!keyInput) {
-      setError('Please provide a private key');
+    if (!decryptKeyInput) {
+      setDecryptError('Please provide a key');
       return;
     }
 
     setLoading(true);
-    setError('');
+    setDecryptError('');
 
     try {
+      const body = { ciphertext: decryptCiphertext };
+      if (decryptionType === 'private') {
+        body.privateKey = decryptKeyInput;
+      } else {
+        body.publicKey = decryptKeyInput;
+      }
+
       const response = await fetch('http://localhost:5000/api/crypto/rsa/decrypt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ciphertext, key: keyInput })
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
-      if (data.error) {
-        setError('Error decrypting: ' + data.error);
+      if (!data.success) {
+        setDecryptError(data.message || data.error || JSON.stringify(data));
       } else {
-        setResult(data.result);
-        setPlaintext(data.result);
+        setDecryptResult(data.data.decrypted);
       }
     } catch (err) {
-      setError('Error decrypting: ' + err.message);
+      setDecryptError('Error decrypting: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyResult = () => {
-    navigator.clipboard.writeText(result);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyResult = (textToCopy) => {
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedResult(true);
+    setCopiedKey('');
+    setTimeout(() => setCopiedResult(false), 2000);
   };
 
-  const handleCopyKey = (key) => {
+  const handleCopyKey = (keyType, key) => {
     navigator.clipboard.writeText(key);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedKey(keyType);
+    setCopiedResult(false);
+    setTimeout(() => setCopiedKey(''), 2000);
   };
 
+  // Reset tuỳ theo tab hiện tại
   const handleReset = () => {
-    setPlaintext('');
-    setCiphertext('');
-    setKeyInput('');
-    setResult('');
-    setError('');
+    if (operation === 'encrypt') {
+      setEncryptPlaintext('');
+      setEncryptKeyInput('');
+      setEncryptResult('');
+      setEncryptError('');
+    } else if (operation === 'decrypt') {
+      setDecryptCiphertext('');
+      setDecryptKeyInput('');
+      setDecryptResult('');
+      setDecryptError('');
+    }
+    setCopiedResult(false);
   };
 
   return (
@@ -138,52 +168,39 @@ function AsymmetricEncryption({ onBack }) {
       <div className="crypto-container">
         <div className="crypto-header">
           <button className="back-button" onClick={onBack}>
-            ← Back to Menu
+            ← Trở về
           </button>
-          <h2>Asymmetric Encryption (RSA)</h2>
+          <h2>Mã hóa bất đối xứng RSA</h2>
         </div>
 
         <div className="tabs">
           <button
             className={`tab ${operation === 'generate' ? 'active' : ''}`}
-            onClick={() => {
-              setOperation('generate');
-              setResult('');
-              setError('');
-            }}
+            onClick={() => setOperation('generate')}
           >
             Generate Keys
           </button>
           <button
             className={`tab ${operation === 'encrypt' ? 'active' : ''}`}
-            onClick={() => {
-              setOperation('encrypt');
-              setResult('');
-              setError('');
-            }}
+            onClick={() => setOperation('encrypt')}
           >
             Encrypt
           </button>
           <button
             className={`tab ${operation === 'decrypt' ? 'active' : ''}`}
-            onClick={() => {
-              setOperation('decrypt');
-              setResult('');
-              setError('');
-            }}
+            onClick={() => setOperation('decrypt')}
           >
             Decrypt
           </button>
         </div>
 
+        {/* TAB GENERATE */}
         {operation === 'generate' && (
           <div className="tab-content">
             <div className="control-group">
               <label>Key Size (bits)</label>
               <select value={keySize} onChange={(e) => setKeySize(Number(e.target.value))}>
-                <option value={1024}>1024</option>
                 <option value={2048}>2048</option>
-                <option value={4096}>4096</option>
               </select>
             </div>
 
@@ -195,32 +212,35 @@ function AsymmetricEncryption({ onBack }) {
               {loading ? 'Generating...' : 'Generate Key Pair'}
             </button>
 
+            {generateError && <div className="error-message">{generateError}</div>}
+
             {publicKey && privateKey && (
               <div className="keys-display">
                 <div className="key-box">
                   <div className="key-header">
                     <h3>Public Key</h3>
-                    <button className="copy-btn" onClick={() => handleCopyKey(publicKey)}>
-                      {copied ? '✓' : 'Copy'}
+                    <button className="copy-btn" onClick={() => handleCopyKey('public', publicKey)}>
+                      {copiedKey === 'public' ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
-                  <textarea readOnly value={publicKey} />
+                  <textarea readOnly value={publicKey} rows="14" />
                 </div>
 
                 <div className="key-box">
                   <div className="key-header">
                     <h3>Private Key</h3>
-                    <button className="copy-btn" onClick={() => handleCopyKey(privateKey)}>
-                      {copied ? '✓' : 'Copy'}
+                    <button className="copy-btn" onClick={() => handleCopyKey('private', privateKey)}>
+                      {copiedKey === 'private' ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
-                  <textarea readOnly value={privateKey} />
+                  <textarea readOnly value={privateKey} rows="14" />
                 </div>
               </div>
             )}
           </div>
         )}
 
+        {/* TAB ENCRYPT */}
         {operation === 'encrypt' && (
           <div className="tab-content">
             <div className="control-group">
@@ -245,34 +265,40 @@ function AsymmetricEncryption({ onBack }) {
               <div className="input-group">
                 <label>Plaintext</label>
                 <textarea
-                  value={plaintext}
-                  onChange={(e) => setPlaintext(e.target.value)}
+                  value={encryptPlaintext}
+                  onChange={(e) => setEncryptPlaintext(e.target.value)}
                   placeholder="Enter text to encrypt"
-                  rows="4"
+                  rows="10"
                 />
               </div>
 
               <div className="input-group">
                 <label>{encryptionType === 'public' ? 'Public Key' : 'Private Key'}</label>
                 <textarea
-                  value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
+                  value={encryptKeyInput}
+                  onChange={(e) => setEncryptKeyInput(e.target.value)}
                   placeholder="Paste your key here"
-                  rows="4"
+                  rows="10"
                 />
               </div>
             </div>
 
-            {error && <div className="error-message">{error}</div>}
+            <p className="hint">
+              Mặc định: dùng Public Key để mã hóa và Private Key để giải mã. Tùy chọn "Private Key" ở đây chỉ dùng khi bạn muốn thử kiểu mã hóa ngược như chữ ký số.
+            </p>
 
-            {result && (
+            {encryptError && <div className="error-message">{encryptError}</div>}
+
+            {encryptResult && (
               <div className="result-box">
-                <h3>Encrypted Result:</h3>
-                <div className="result-content">
-                  <p>{result}</p>
-                  <button className="copy-button" onClick={handleCopyResult}>
-                    {copied ? '✓ Copied!' : 'Copy Result'}
+                <div className="result-header">
+                  <h3>Encrypted Result:</h3>
+                  <button className="copy-button" onClick={() => handleCopyResult(encryptResult)}>
+                    {copiedResult ? '✓ Copied!' : 'Copy Result'}
                   </button>
+                </div>
+                <div className="result-content">
+                  <textarea readOnly value={encryptResult} rows="12" className="result-textarea" />
                 </div>
               </div>
             )}
@@ -292,40 +318,64 @@ function AsymmetricEncryption({ onBack }) {
           </div>
         )}
 
+        {/* TAB DECRYPT */}
         {operation === 'decrypt' && (
           <div className="tab-content">
+            <div className="control-group">
+              <label>Decrypt with Key Type</label>
+              <div className="key-type-buttons">
+                <button
+                  className={`type-btn ${decryptionType === 'private' ? 'active' : ''}`}
+                  onClick={() => setDecryptionType('private')}
+                >
+                  Private Key
+                </button>
+                <button
+                  className={`type-btn ${decryptionType === 'public' ? 'active' : ''}`}
+                  onClick={() => setDecryptionType('public')}
+                >
+                  Public Key
+                </button>
+              </div>
+              <p className="hint">
+                Nếu dữ liệu được mã hóa bằng Public Key thì giải mã bằng Private Key. Nếu mã hóa bằng Private Key thì giải mã bằng Public Key.
+              </p>
+            </div>
+
             <div className="input-grid">
               <div className="input-group">
                 <label>Ciphertext</label>
                 <textarea
-                  value={ciphertext}
-                  onChange={(e) => setCiphertext(e.target.value)}
+                  value={decryptCiphertext}
+                  onChange={(e) => setDecryptCiphertext(e.target.value)}
                   placeholder="Enter encrypted text"
-                  rows="4"
+                  rows="10"
                 />
               </div>
 
               <div className="input-group">
-                <label>Private Key</label>
+                <label>{decryptionType === 'private' ? 'Private Key' : 'Public Key'}</label>
                 <textarea
-                  value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
-                  placeholder="Paste your private key here"
-                  rows="4"
+                  value={decryptKeyInput}
+                  onChange={(e) => setDecryptKeyInput(e.target.value)}
+                  placeholder={`Paste your ${decryptionType === 'private' ? 'private' : 'public'} key here`}
+                  rows="10"
                 />
               </div>
             </div>
 
-            {error && <div className="error-message">{error}</div>}
+            {decryptError && <div className="error-message">{decryptError}</div>}
 
-            {result && (
+            {decryptResult && (
               <div className="result-box">
-                <h3>Decrypted Result:</h3>
-                <div className="result-content">
-                  <p>{result}</p>
-                  <button className="copy-button" onClick={handleCopyResult}>
-                    {copied ? '✓ Copied!' : 'Copy Result'}
+                <div className="result-header">
+                  <h3>Decrypted Result:</h3>
+                  <button className="copy-button" onClick={() => handleCopyResult(decryptResult)}>
+                    {copiedResult ? '✓ Copied!' : 'Copy Result'}
                   </button>
+                </div>
+                <div className="result-content">
+                  <textarea readOnly value={decryptResult} rows="12" className="result-textarea" />
                 </div>
               </div>
             )}

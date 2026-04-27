@@ -49,36 +49,52 @@ const RSAController = {
     }
   },
 
-  // Giải mã dữ liệu sử dụng khóa RSA
+  // Giải mã dữ liệu sử dụng RSA
   decrypt: (req, res) => {
     try {
-      // Lấy dữ liệu mã hóa (encrypted) và khóa riêng tư (privateKey) từ request body
-      const { encrypted, privateKey } = req.body;
+      // Lấy dữ liệu mã hóa và khóa từ request body
+      const { ciphertext, privateKey, publicKey } = req.body;
 
       // Kiểm tra dữ liệu đầu vào bắt buộc
-      if (!encrypted) {
+      if (!ciphertext) {
         return res.status(400).json({
           success: false,
-          message: 'encrypted là bắt buộc',
+          message: 'ciphertext là bắt buộc',
         });
       }
 
-      // Nếu người dùng truyền privateKey riêng, cập nhật vào service
-      if (privateKey) {
-        rsaService.setPrivateKey(privateKey);
+      if (!privateKey && !publicKey) {
+        return res.status(400).json({
+          success: false,
+          message: 'Phải cung cấp privateKey hoặc publicKey để giải mã',
+        });
       }
 
-      // Thực hiện giải mã thông qua service
-      const decrypted = rsaService.decrypt(encrypted, privateKey);
+      const key = privateKey || publicKey;
+      const keyType = privateKey ? 'private' : 'public';
 
-      // Trả về kết quả giải mã thành công
-      res.status(200).json({
-        success: true,
-        data: {
-          decrypted: decrypted,
-        },
-        message: 'Giải mã dữ liệu thành công',
-      });
+      try {
+        if (privateKey) {
+          rsaService.setPrivateKey(privateKey);
+        }
+        if (publicKey) {
+          rsaService.setPublicKey(publicKey);
+        }
+        // Thực hiện giải mã thông qua service
+        const decrypted = rsaService.decrypt(ciphertext, key, keyType);
+        res.status(200).json({
+          success: true,
+          data: {
+            decrypted: decrypted,
+          },
+          message: 'Giải mã dữ liệu thành công',
+        });
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
     } 
     catch (error) {
       res.status(500).json({

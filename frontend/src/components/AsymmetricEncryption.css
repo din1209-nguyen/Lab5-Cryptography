@@ -1,5 +1,57 @@
 .asymmetric-encryption {
-  padding: 1rem 0;
+  min-height: calc(100vh - 2rem);
+  padding: 2rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(180deg, #f4f7ff 0%, #ffffff 100%);
+}
+
+.crypto-container {
+  width: 100%;
+  max-width: 1240px;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 24px 80px rgba(96, 132, 255, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.12);
+}
+
+.crypto-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.crypto-header h2 {
+  margin: 0;
+  color: #222;
+  font-size: clamp(1.6rem, 2.2vw, 2.4rem);
+}
+
+.back-button {
+  padding: 0.75rem 1rem;
+  border: 1px solid #667eea;
+  background: white;
+  color: #667eea;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: #eef2ff;
+}
+
+.hint {
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .tabs {
@@ -165,14 +217,15 @@
 
 .key-box textarea {
   width: 100%;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 1.2rem;
+  border: 2px solid #4facfe;
+  border-radius: 8px;
   font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
+  font-size: 1.05rem;
   resize: vertical;
-  max-height: 300px;
-  background-color: white;
+  min-height: 120px;
+  max-height: 400px;
+  background-color: #f7fbff;
 }
 
 .input-grid {
@@ -194,13 +247,16 @@
 }
 
 .input-group textarea {
-  padding: 0.8rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 1.2rem;
+  border: 2px solid #f093fb;
+  border-radius: 8px;
   font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
+  font-size: 1.15rem;
   resize: vertical;
+  min-height: 120px;
+  max-height: 400px;
   transition: all 0.3s ease;
+  background: #fff8fc;
 }
 
 .input-group textarea:focus {
@@ -212,10 +268,11 @@
 .error-message {
   background-color: #fee;
   color: #c33;
-  padding: 1rem;
-  border-radius: 6px;
+  padding: 1.2rem;
+  border-radius: 8px;
   margin-bottom: 1.5rem;
-  border-left: 4px solid #c33;
+  border-left: 6px solid #c33;
+  font-size: 1.1rem;
 }
 
 .result-box {
@@ -241,13 +298,25 @@
 .result-content p {
   flex: 1;
   background-color: white;
-  padding: 1rem;
-  border-radius: 6px;
+  padding: 1.2rem;
+  border-radius: 8px;
   font-family: 'Courier New', monospace;
   word-break: break-all;
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
-  font-size: 0.85rem;
+  font-size: 1.15rem;
+}
+
+.result-textarea {
+  width: 100%;
+  padding: 1.2rem;
+  border: 2px solid #4facfe;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 1.15rem;
+  min-height: 120px;
+  max-height: 400px;
+  background-color: #f7fbff;
 }
 
 .copy-button {
@@ -349,4 +418,25 @@
   .reset-button {
     width: 100%;
   }
+}
+
+.key-type-buttons {
+  display: flex;
+  gap: 15px; /* Khoảng cách giữa 2 nút */
+  margin-bottom: 15px; /* Tạo khoảng cách đẩy dòng chữ xuống dưới */
+}
+
+.type-btn {
+  flex: 1; /* Cho 2 nút có chiều rộng bằng nhau */
+  padding: 10px;
+  cursor: pointer;
+}
+
+.hint {
+  display: block;
+  clear: both; /* Ngăn chặn việc bị các thành phần khác đè lên */
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
 }

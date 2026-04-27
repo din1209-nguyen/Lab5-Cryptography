@@ -1,3 +1,4 @@
+// Đã có setPublicKey và setPrivateKey đúng vị trí trong class bên dưới, xóa các hàm lạc chỗ ngoài class.
 const crypto = require('crypto');
 
 class RSAService {
@@ -86,7 +87,7 @@ class RSAService {
       } else if (keyType === 'private') {
         // Mã hóa bằng khóa riêng tư (privateEncrypt)
         encryptedBuffer = crypto.privateEncrypt(
-          { key: useKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+          { key: useKey, padding: crypto.constants.RSA_PKCS1_PADDING },
           buffer
         );
       } else {
@@ -126,7 +127,7 @@ class RSAService {
       } else if (keyType === 'public') {
         // Giải mã bằng khóa công khai (publicDecrypt)
         decryptedBuffer = crypto.publicDecrypt(
-          { key: useKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+          { key: useKey, padding: crypto.constants.RSA_PKCS1_PADDING },
           buffer
         );
       } else {
