@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './SymmetricEncryption.css';
 
 function SymmetricEncryption({ onBack }) {
+  const [algorithm, setAlgorithm] = useState('3DES');
   const [mode, setMode] = useState('ECB');
   const [operation, setOperation] = useState('encrypt');
   const [plaintext, setPlaintext] = useState('');
@@ -18,7 +19,8 @@ function SymmetricEncryption({ onBack }) {
     try {
       const response = await fetch('http://localhost:5000/api/crypto/symmetric/generate-key', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ algorithm })
       });
       const data = await response.json();
       if (data.success && data.key) {
@@ -37,7 +39,8 @@ function SymmetricEncryption({ onBack }) {
     try {
       const response = await fetch('http://localhost:5000/api/crypto/symmetric/generate-iv', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ algorithm })
       });
       const data = await response.json();
       if (data.success && data.iv) {
@@ -78,6 +81,7 @@ function SymmetricEncryption({ onBack }) {
 
     try {
       const payload = {
+        algorithm,
         mode,
         key: secretKey,
         ...(operation === 'encrypt'
@@ -141,10 +145,28 @@ function SymmetricEncryption({ onBack }) {
           <button className="back-button" onClick={onBack}>
             ← Back to Menu
           </button>
-          <h2>3DES Encryption (Triple DES)</h2>
+          <h2>{algorithm} Encryption</h2>
         </div>
 
         <div className="controls-grid">
+          <div className="control-group">
+            <label>Algorithm</label>
+            <select
+              value={algorithm}
+              onChange={(e) => {
+                setAlgorithm(e.target.value);
+                setSecretKey('');
+                setIv('');
+                setResult('');
+                setError('');
+              }}
+            >
+              <option value="DES">DES</option>
+              <option value="3DES">3DES</option>
+              <option value="AES">AES</option>
+            </select>
+          </div>
+
           <div className="control-group">
             <label>Mode</label>
             <select
@@ -191,11 +213,17 @@ function SymmetricEncryption({ onBack }) {
 
         <div className="input-grid">
           <div className="input-group">
-            <label>Secret Key (Hex) - 24 bytes (48 hex characters)</label>
+            <label>
+              Secret Key (Hex) - {algorithm === '3DES' ? '24 bytes (48 hex characters)' : 'Not implemented yet'}
+            </label>
               <textarea
                 value={secretKey}
                 onChange={(e) => setSecretKey(e.target.value)}
-                placeholder="Enter your 3DES key in hexadecimal format (48 hex characters)"
+                placeholder={
+                  algorithm === '3DES'
+                    ? 'Enter your 3DES key in hexadecimal format (48 hex characters)'
+                    : `Backend for ${algorithm} is not implemented yet`
+                }
                 rows="4"
               />
             <button className="gen-button" onClick={handleGenerateKey}>
@@ -236,12 +264,13 @@ function SymmetricEncryption({ onBack }) {
         </div>
 
         <div className="info-box">
-            <h4>ℹ️ 3DES Information:</h4>
+            <h4>ℹ️ Symmetric Encryption Information:</h4>
           <ul>
-              <li><strong>Algorithm:</strong> Triple DES (3DES)</li>
-              <li><strong>Key Size:</strong> 24 bytes (192 bits)</li>
-              <li><strong>Block Size:</strong> 8 bytes (64 bits)</li>
-              <li><strong>IV Size:</strong> 8 bytes (64 bits)</li>
+              <li><strong>Available selections:</strong> DES, 3DES, AES</li>
+              <li><strong>Implemented in backend:</strong> 3DES only</li>
+              <li><strong>3DES Key Size:</strong> 24 bytes (192 bits)</li>
+              <li><strong>3DES Block Size:</strong> 8 bytes (64 bits)</li>
+              <li><strong>3DES IV Size:</strong> 8 bytes (64 bits)</li>
             <li><strong>ECB Mode:</strong> Electronic Codebook (no IV needed)</li>
             <li><strong>CBC Mode:</strong> Cipher Block Chaining (IV required)</li>
           </ul>
