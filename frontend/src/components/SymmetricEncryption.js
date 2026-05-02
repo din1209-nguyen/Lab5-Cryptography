@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import './SymmetricEncryption.css';
 
 function SymmetricEncryption({ onBack }) {
-  const [algorithm, setAlgorithm] = useState('AES');
   const [mode, setMode] = useState('ECB');
   const [operation, setOperation] = useState('encrypt');
   const [plaintext, setPlaintext] = useState('');
@@ -14,51 +13,53 @@ function SymmetricEncryption({ onBack }) {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // Hàm generate random key
   const handleGenerateKey = async () => {
     try {
-      const keyLength = algorithm === 'DES' ? 8 : algorithm === '3DES' ? 24 : 32;
-      const response = await fetch('http://localhost:5000/api/crypto/generate-key', {
+      const response = await fetch('http://localhost:5000/api/crypto/symmetric/generate-key', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ algorithm, keyLength })
+        headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
-      if (data.key) {
+      if (data.success && data.key) {
         setSecretKey(data.key);
         setError('');
       } else {
-        setError('Error generating key');
+        setError(data.message || 'Error generating key');
       }
     } catch (err) {
       setError('Error generating key: ' + err.message);
     }
   };
 
+  // Hàm generate random IV
   const handleGenerateIV = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/crypto/generate-iv', {
+      const response = await fetch('http://localhost:5000/api/crypto/symmetric/generate-iv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
-      if (data.iv) {
+      if (data.success && data.iv) {
         setIv(data.iv);
+        setError('');
       } else {
-        setError('Error generating IV');
+        setError(data.message || 'Error generating IV');
       }
     } catch (err) {
       setError('Error generating IV: ' + err.message);
     }
   };
 
+  // Hàm thực hiện encryption/decryption
   const handleExecute = async () => {
     if (!secretKey) {
       setError('Please provide or generate a secret key');
       return;
     }
 
-    if ((mode === 'CBC' || mode === 'CFB' || mode === 'OFB') && !iv) {
-      setError('Please provide or generate an IV for ' + mode + ' mode');
+    if (mode === 'CBC' && !iv) {
+      setError('Please provide or generate an IV for CBC mode');
       return;
     }
 
@@ -77,7 +78,6 @@ function SymmetricEncryption({ onBack }) {
 
     try {
       const payload = {
-        algorithm,
         mode,
         key: secretKey,
         ...(operation === 'encrypt'
@@ -85,12 +85,14 @@ function SymmetricEncryption({ onBack }) {
           : { ciphertext })
       };
 
-      if (mode !== 'ECB') {
+      // Thêm IV nếu mode là CBC
+      if (mode === 'CBC') {
         payload.iv = iv;
       }
 
+      const endpoint = operation === 'encrypt' ? 'encrypt' : 'decrypt';
       const response = await fetch(
-        `http://localhost:5000/api/crypto/symmetric/${operation}`,
+        `http://localhost:5000/api/crypto/symmetric/${endpoint}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -99,15 +101,16 @@ function SymmetricEncryption({ onBack }) {
       );
 
       const data = await response.json();
-      if (data.error) {
-        setError('Error: ' + data.error);
-      } else {
-        setResult(data.result);
+      if (data.success) {
         if (operation === 'encrypt') {
-          setCiphertext(data.result);
+          setResult(data.ciphertext);
+          setCiphertext(data.ciphertext);
         } else {
-          setPlaintext(data.result);
+          setResult(data.plaintext);
+          setPlaintext(data.plaintext);
         }
+      } else {
+        setError(data.message || 'Error processing request');
       }
     } catch (err) {
       setError('Error: ' + err.message);
@@ -138,38 +141,26 @@ function SymmetricEncryption({ onBack }) {
           <button className="back-button" onClick={onBack}>
             ← Back to Menu
           </button>
-          <h2>Symmetric Encryption</h2>
+          <h2>3DES Encryption (Triple DES)</h2>
         </div>
 
         <div className="controls-grid">
           <div className="control-group">
-            <label>Algorithm</label>
+            <label>Mode</label>
             <select
-              value={algorithm}
-              onChange={(e) => setAlgorithm(e.target.value)}
+              value={mode}
+              onChange={(e) => {
+                setMode(e.target.value);
+                setIv('');
+                setResult('');
+                setError('');
+              }}
               disabled={result !== ''}
             >
-              <option value="DES">DES</option>
-              <option value="3DES">3DES</option>
-              <option value="AES">AES</option>
+              <option value="ECB">ECB (Electronic Codebook)</option>
+              <option value="CBC">CBC (Cipher Block Chaining)</option>
             </select>
           </div>
-
-          {algorithm !== 'DES' && (
-            <div className="control-group">
-              <label>Mode</label>
-              <select
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-                disabled={result !== ''}
-              >
-                <option value="ECB">ECB</option>
-                <option value="CBC">CBC</option>
-                <option value="CFB">CFB</option>
-                <option value="OFB">OFB</option>
-              </select>
-            </div>
-          )}
 
           <div className="control-group">
             <label>Operation</label>
@@ -200,25 +191,25 @@ function SymmetricEncryption({ onBack }) {
 
         <div className="input-grid">
           <div className="input-group">
-            <label>Secret Key (Hex)</label>
-            <textarea
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-              placeholder="Enter your secret key in hexadecimal format"
-              rows="4"
-            />
+            <label>Secret Key (Hex) - 24 bytes (48 hex characters)</label>
+              <textarea
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                placeholder="Enter your 3DES key in hexadecimal format (48 hex characters)"
+                rows="4"
+              />
             <button className="gen-button" onClick={handleGenerateKey}>
               Generate Random Key
             </button>
           </div>
 
-          {(mode === 'CBC' || mode === 'CFB' || mode === 'OFB') && (
+          {mode === 'CBC' && (
             <div className="input-group">
-              <label>IV (Hex)</label>
+                <label>IV (Hex) - 8 bytes (16 hex characters)</label>
               <textarea
                 value={iv}
                 onChange={(e) => setIv(e.target.value)}
-                placeholder="Initialization Vector in hexadecimal format"
+                  placeholder="Initialization Vector in hexadecimal format (16 hex characters)"
                 rows="4"
               />
               <button className="gen-button" onClick={handleGenerateIV}>
@@ -242,6 +233,18 @@ function SymmetricEncryption({ onBack }) {
               rows="4"
             />
           </div>
+        </div>
+
+        <div className="info-box">
+            <h4>ℹ️ 3DES Information:</h4>
+          <ul>
+              <li><strong>Algorithm:</strong> Triple DES (3DES)</li>
+              <li><strong>Key Size:</strong> 24 bytes (192 bits)</li>
+              <li><strong>Block Size:</strong> 8 bytes (64 bits)</li>
+              <li><strong>IV Size:</strong> 8 bytes (64 bits)</li>
+            <li><strong>ECB Mode:</strong> Electronic Codebook (no IV needed)</li>
+            <li><strong>CBC Mode:</strong> Cipher Block Chaining (IV required)</li>
+          </ul>
         </div>
 
         {error && <div className="error-message">{error}</div>}

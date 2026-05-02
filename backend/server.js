@@ -1,5 +1,6 @@
 const express = require('express');
 const rsaRoutes = require('./src/routes/rsaRoutes');
+const symmetricRoutes = require('./src/routes/symmetricRoutes');
 
 // Nhập module cors - cho phép requests từ frontend
 const cors = require('cors');
@@ -31,6 +32,9 @@ app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
 // Sử dụng RSA routes tại path /api/crypto/rsa
 app.use('/api/crypto/rsa', rsaRoutes);
+
+// Sử dụng Symmetric (DES, 3DES, AES) routes tại path /api/crypto/symmetric
+app.use('/api/crypto/symmetric', symmetricRoutes);
 
 // Middleware xử lý 404 - Route không tìm thấy
 app.use((req, res) => {
