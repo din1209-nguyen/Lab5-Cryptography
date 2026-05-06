@@ -16,46 +16,61 @@ const validateMode = (mode) => {
   }
 };
 
-const get3DESContext = (key, mode, iv = null) => {
+const getCryptoContext = (key, mode, iv = null, algorithm = '3DES') => {
   const keyBuffer = parseHexBuffer(key, 'Key');
-
-  if (keyBuffer.length !== 24) {
-    throw new Error(`3DES key must be 24 bytes (48 hex characters), got ${keyBuffer.length} bytes`);
-  }
-
   validateMode(mode);
 
-  const cipherAlgo = mode === 'ECB' ? 'des-ede3-ecb' : 'des-ede3-cbc';
-  let ivBuffer = null;
+  let cipherAlgo = '';
+  let expectedKeyLen = 0;
 
+  // Cấu hình thông số theo từng thuật toán
+  switch (algorithm.toUpperCase()) {
+    case 'DES':
+      expectedKeyLen = 8; // 64 bits
+      cipherAlgo = `des-${mode.toLowerCase()}`;
+      break;
+    case '3DES':
+      expectedKeyLen = 24; // 192 bits
+      cipherAlgo = `des-ede3-${mode.toLowerCase()}`;
+      break;
+    case 'AES':
+      expectedKeyLen = 16; // AES-128 (có thể chỉnh thành 32 cho AES-256)
+      cipherAlgo = `aes-128-${mode.toLowerCase()}`;
+      break;
+    default:
+      throw new Error(`Algorithm ${algorithm} not supported`);
+  }
+
+  if (keyBuffer.length !== expectedKeyLen) {
+    throw new Error(`${algorithm} key must be ${expectedKeyLen} bytes, got ${keyBuffer.length} bytes`);
+  }
+
+  let ivBuffer = null;
   if (mode === 'CBC') {
-    if (!iv) {
-      throw new Error('IV is required for CBC mode');
-    }
+    if (!iv) throw new Error('IV is required for CBC mode');
     ivBuffer = parseHexBuffer(iv, 'IV');
-    if (ivBuffer.length !== 8) {
-      throw new Error(`IV must be 8 bytes (16 hex characters), got ${ivBuffer.length} bytes`);
+    if (ivBuffer.length !== 8 && algorithm !== 'AES') { // DES/3DES cần 8 bytes IV
+        throw new Error('IV must be 8 bytes');
+    }
+    if (algorithm === 'AES' && ivBuffer.length !== 16) { // AES cần 16 bytes IV
+        throw new Error('IV for AES must be 16 bytes');
     }
   }
 
-  return {
-    keyBuffer,
-    ivBuffer,
-    cipherAlgo
-  };
+  return { keyBuffer, ivBuffer, cipherAlgo };
 };
 
-const run3DES = (operation, text, key, mode, iv = null) => {
-  const { keyBuffer, ivBuffer, cipherAlgo } = get3DESContext(key, mode, iv);
+const runCrypto = (operation, text, key, mode, iv = null, algorithm = '3DES') => {
+  
+  const { keyBuffer, ivBuffer, cipherAlgo } = getCryptoContext(key, mode, iv, algorithm);
   const isEncrypt = operation === 'encrypt';
 
+  // Đối với ECB, IV phải là một Buffer rỗng (không dùng chuỗi trống '')
+  const finalIv = (mode === 'ECB') ? Buffer.alloc(0) : ivBuffer;
+
   const cryptoTransform = isEncrypt
-    ? (mode === 'ECB'
-      ? crypto.createCipheriv(cipherAlgo, keyBuffer, '')
-      : crypto.createCipheriv(cipherAlgo, keyBuffer, ivBuffer))
-    : (mode === 'ECB'
-      ? crypto.createDecipheriv(cipherAlgo, keyBuffer, '')
-      : crypto.createDecipheriv(cipherAlgo, keyBuffer, ivBuffer));
+    ? crypto.createCipheriv(cipherAlgo, keyBuffer, finalIv)
+    : crypto.createDecipheriv(cipherAlgo, keyBuffer, finalIv);
 
   const inputEncoding = isEncrypt ? 'utf8' : 'hex';
   const outputEncoding = isEncrypt ? 'hex' : 'utf8';
@@ -67,28 +82,33 @@ const run3DES = (operation, text, key, mode, iv = null) => {
 };
 
 // Hàm tạo random key cho 3DES (24 bytes = 192 bits)
-const generateRandomKey = () => {
-  return crypto.randomBytes(24).toString('hex');
+const generateRandomKey = (algorithm = '3DES') => {
+  let bytes = 24; // Mặc định 3DES
+  if (algorithm === 'DES') bytes = 8;
+  if (algorithm === 'AES') bytes = 16;
+  return crypto.randomBytes(bytes).toString('hex');
 };
 
 // Hàm tạo random IV (8 bytes = 64 bits)
-const generateRandomIV = () => {
-  return crypto.randomBytes(8).toString('hex');
+const generateRandomIV = (algorithm = '3DES') => {
+  let bytes = 8; // DES và 3DES dùng 8 bytes IV
+  if (algorithm === 'AES') bytes = 16; // AES dùng 16 bytes IV
+  return crypto.randomBytes(bytes).toString('hex');
 };
 
-// Hàm mã hóa 3DES
-const encrypt = (plaintext, key, mode, iv = null) => {
+// Hàm mã hóa chung
+const encrypt = (plaintext, key, mode, iv = null, algorithm) => {
   try {
-    return run3DES('encrypt', plaintext, key, mode, iv);
+    return runCrypto('encrypt', plaintext, key, mode, iv, algorithm);
   } catch (error) {
     throw new Error(`Encryption error: ${error.message}`);
   }
 };
 
-// Hàm giải mã 3DES
-const decrypt = (ciphertext, key, mode, iv = null) => {
+// Hàm giải mã chung
+const decrypt = (ciphertext, key, mode, iv = null, algorithm) => {
   try {
-    return run3DES('decrypt', ciphertext, key, mode, iv);
+    return runCrypto('decrypt', ciphertext, key, mode, iv, algorithm);
   } catch (error) {
     throw new Error(`Decryption error: ${error.message}`);
   }

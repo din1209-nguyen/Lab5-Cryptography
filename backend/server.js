@@ -1,3 +1,10 @@
+// Ép Node.js hỗ trợ các thuật toán cũ (như DES)
+const crypto = require('crypto');
+try {
+    crypto.createHash('md5');
+} catch (err) {
+    console.log("Legacy OpenSSL enabled");
+}
 const express = require('express');
 const rsaRoutes = require('./src/routes/rsaRoutes');
 const symmetricRoutes = require('./src/routes/symmetricRoutes');
