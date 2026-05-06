@@ -9,14 +9,12 @@ const normalizeAlgorithm = (algorithm) => {
 
 const normalizeMode = (mode) => String(mode || '').toUpperCase();
 
-const ensure3DES = (algorithm) => {
+const validateAlgorithm = (algorithm) => {
   const normalized = normalizeAlgorithm(algorithm);
   if (!SUPPORTED_ALGORITHMS.includes(normalized)) {
     throw new Error('Algorithm must be DES, 3DES, or AES');
   }
-  if (normalized !== '3DES') {
-    throw new Error(`Algorithm ${normalized} is not implemented yet. Please use 3DES.`);
-  }
+  
   return normalized;
 };
 
@@ -39,7 +37,7 @@ const sendClientError = (res, message) => {
 const processCrypto = (req, res, operation) => {
   try {
     const { key, iv, algorithm } = req.body;
-    const selectedAlgorithm = ensure3DES(algorithm);
+    const selectedAlgorithm = validateAlgorithm(algorithm);
     const mode = normalizeMode(req.body.mode);
     const inputField = operation === 'encrypt' ? 'plaintext' : 'ciphertext';
     const outputField = operation === 'encrypt' ? 'ciphertext' : 'plaintext';
@@ -56,8 +54,8 @@ const processCrypto = (req, res, operation) => {
     validateModeAndIV(mode, iv);
 
     const result = operation === 'encrypt'
-      ? symmetricService.encrypt(rawInput, key, mode, iv)
-      : symmetricService.decrypt(rawInput, key, mode, iv);
+      ? symmetricService.encrypt(rawInput, key, mode, iv, selectedAlgorithm)
+      : symmetricService.decrypt(rawInput, key, mode, iv, selectedAlgorithm);
 
     const operationLabel = operation === 'encrypt' ? 'encryption' : 'decryption';
 
@@ -66,7 +64,7 @@ const processCrypto = (req, res, operation) => {
       [outputField]: result,
       algorithm: selectedAlgorithm,
       mode,
-      message: `3DES ${operationLabel} with ${mode} mode successful`
+      message: `${selectedAlgorithm} ${operationLabel} with ${mode} mode successful`
     });
   } catch (error) {
     sendClientError(res, error.message);
@@ -76,14 +74,14 @@ const processCrypto = (req, res, operation) => {
 // Hàm generate random key
 const generateKey = (req, res) => {
   try {
-    const algorithm = ensure3DES(req.body?.algorithm);
-    const key = symmetricService.generateRandomKey();
+    const algorithm = validateAlgorithm(req.body?.algorithm);
+    const key = symmetricService.generateRandomKey(algorithm);
 
     res.json({
       success: true,
       key: key,
       algorithm,
-      message: '3DES key generated successfully'
+      message: `${algorithm} key generated successfully`
     });
   } catch (error) {
     sendClientError(res, error.message);
@@ -93,14 +91,14 @@ const generateKey = (req, res) => {
 // Hàm generate random IV
 const generateIV = (req, res) => {
   try {
-    const algorithm = ensure3DES(req.body?.algorithm);
-    const iv = symmetricService.generateRandomIV();
+    const algorithm = validateAlgorithm(req.body?.algorithm);
+    const iv = symmetricService.generateRandomIV(algorithm);
 
     res.json({
       success: true,
       iv: iv,
       algorithm,
-      message: 'IV for 3DES generated successfully'
+      message: `IV for ${algorithm} generated successfully`
     });
   } catch (error) {
     sendClientError(res, error.message);
